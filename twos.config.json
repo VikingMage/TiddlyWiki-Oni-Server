@@ -1,0 +1,15 @@
+{
+  "wikis": {
+    "TwAdmMaster": {
+      "role": "master",
+      "scopes": ["start:any", "config:write"],
+      "twCoreVersion": "5.3.8",
+      "rootPath": "./wikis/OneWikiToRuleThemAll",
+      "twPluginPaths": [],
+      "https": false,
+      "host": "localhost",
+      "port": 5020,
+      "autoStart": false
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "tw-oni-server",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/daemon/daemon.js",
+  "bin": {
+    "twos": "dist/cli/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/daemon/daemon.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VikingMage/TiddlyWiki-Oni-Server.git"
+  },
+  "keywords": [
+    "TiddlyWiki",
+    "server",
+    "daemon"
+  ],
+  "author": "VikingMage",
+  "bugs": {
+    "url": "https://github.com/VikingMage/TiddlyWiki-Oni-Server/issues"
+  },
+  "homepage": "https://github.com/VikingMage/TiddlyWiki-Oni-Server#readme",
+  "directories": {
+    "doc": "docs"
+  },
+  "license": "ISC"
+}

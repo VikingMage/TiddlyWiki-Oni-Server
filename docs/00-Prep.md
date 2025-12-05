@@ -3,55 +3,67 @@
  * see [[docs/01-foundation.md]]
 
 
-## Phase 2 – Build the boring daemon spine + CLI
+Next Steps:
 
-**Goal:** A working daemon that can read config, list wikis, and start/stop a *single* wiki reliably, exercised via CLI. No TW plugin yet, no HTML UI beyond maybe a health check.
+## Phase 2 – Concrete dev steps (do these in order)
 
-1. **Set up repo + tooling**
+1. **Lock in the baseline config + scripts**
 
-   * Node + TypeScript.
-   * One entry for daemon: `src/daemon.ts`.
-   * One for CLI: `src/cli.ts`.
-   * Tests: Vitest / Jest, whatever, but pick one and actually write tests.
+   * Make sure `tsconfig.json`, `package.json`, `.gitignore`, and `twos.config.json` are all committed and valid.
+   * Add npm scripts if missing:
 
-2. **Implement config & types first**
+     * `"build": "tsc"`
+     * `"dev": "ts-node src/daemon/daemon.ts"`
 
-   * Define `WikiConfig`, `DaemonConfig`, `Role`, `Scope` as TS types.
-   * Implement `loadConfig(path): DaemonConfig` that:
+2. **Get the daemon API actually running and testable**
 
-     * Reads JSON.
-     * Validates, throws if invalid.
-   * Hard-fail on bad config. Don’t be clever here.
+   * Implement / fix `startDaemon` so:
 
-3. **Implement daemon HTTP API skeleton**
+     * It loads `twos.config.json`.
+     * It creates `WikiRuntime` objects.
+     * It starts the HTTP server on a fixed port (e.g. 7357).
+   * Manually verify with:
 
-   * Minimal HTTP server (Fastify/Express or plain `http`).
+     * `npm run dev`
+     * `curl http://localhost:7357/api/health`
+     * `curl http://localhost:7357/api/wikis`
 
-   * Hard-wire:
+3. **Define and wire the wiki lifecycle states in code**
 
-     * `GET /api/health` → `{ status: "ok" }`
-     * `GET /api/wikis` → return config only (status = `"unknown"` for now).
-     * `POST /api/wikis/:id/start` / `stop` → stub: just log “would start/stop”.
+   * Ensure `WikiState` union matches the table (`"unknown" | "stopped" | ...`).
+   * Add a `setState()` method or simple state transitions in `WikiRuntime` (still stubbed, no child processes yet).
+   * For now, keep every wiki in `"unknown"` or `"stopped"`; the point is to have the plumbing in place.
 
+4. **Implement a minimal, real CLI that talks to the daemon**
+
+   * `twos health` → calls `/api/health` and prints status.
+   * `twos wikis` → calls `/api/wikis` and prints a simple table/list.
+   * CLI *never* reaches into daemon internals; it only uses HTTP.
+
+5. **Add a test harness for the API (start small)**
+
+   * Pick a test runner (I’d suggest Vitest).
    * Write tests that:
 
-     * Spin daemon on a random port.
-     * Call these endpoints.
-     * Assert responses.
+     * Start the daemon on a random port.
+     * Assert `/api/health` returns `{ status: "ok" }`.
+     * Assert `/api/wikis` returns the config values for your sample wiki.
 
-4. **Implement CLI wrapper `twadm`**
+6. **Introduce a logging strategy (minimal but consistent)**
 
-   * CLI commands:
+   * Wrap `console.log` behind a tiny logger module (e.g. `src/util/log.ts`).
+   * Use it in daemon startup and API requests.
+   * This sets you up for later file logging without refactors.
 
-     * `twadm health`
-     * `twadm wikis list`
-     * `twadm wikis start <id>`
-     * `twadm wikis stop <id>`
-   * CLI only ever talks to the HTTP API, not internal functions.
-   * Tests: run daemon on test port, run CLI with that port, assert output.
+7. **Only then: design the process-launch interface (no implementation yet)**
 
-At the end of Phase 2:
-You have a typed config, a tiny API, and a CLI that can poke it. Still no real TiddlyWiki processes, but the scaffolding exists.
+   * Define an interface like `WikiProcessController` with methods:
+
+     * `start()`, `stop()`, `getState()`.
+   * Don’t spawn any real TiddlyWiki yet; just define the contract and a “no-op” implementation that flips the state machine.
+
+
+
 
 ---
 

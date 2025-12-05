@@ -1,7 +1,9 @@
 # TW Oni Server – Foundation
 
-## Purpose
 
+This document defines the technical foundation for the TW Oni Server (`twos`) daemon, runtime model, configuration structure, and API surface.
+
+## Overview
 TW Oni Server (TWOS) is a local daemon that manages TiddlyWiki instances, their core versions, and some host-level features (backup, git, etc.).
 
 It is:
@@ -10,13 +12,13 @@ It is:
 - Able to run as a background service/daemon.
 - Controllable via CLI (`twos`) and a minimal HTTP API (and later a simple HTML UI).
 
-## Out-of-scope for v1
+## Core Principles
 
-- No offline config queue.
-- No TW-driven GitHub integration (TW’s own sync plugins are independent).
-- No Electron shell.
-- No fancy UI beyond a basic HTML page + CLI.
-- No multi-user auth; only local, trusted usage.
+1. The daemon owns lifecycle and configuration.
+2. Wikis run as independent Node processes using native TiddlyWiki CLI.
+3. The daemon exposes a clean HTTP API for UI clients and TW plugins.
+4. TypeScript enforces all contracts.
+
 
 ## Core concepts
 
@@ -48,7 +50,27 @@ It is:
   - `config:read`
   - `config:write`
 
-(In v1, scopes are mostly design placeholders; enforcement can be minimal.)
+---
+
+## Data Model
+
+### WikiConfig
+
+- role: `master | default`
+- scopes: permission list
+- twCoreVersion: version string
+- rootPath: filesystem root of the wiki
+- twPluginPaths: optional list of plugin root directories
+- host, port, https: networking definition
+- autoStart: whether daemon launches it at startup
+
+### WikiRuntime
+
+Transient state owned by daemon:
+
+- current process state
+- future: PID, logs, crash status, restart policy
+
 
 ## Config schema (v1)
 
@@ -73,7 +95,7 @@ Example daemon config:
     }
   }
 }
-````
+```
 
 In v1:
 
@@ -104,7 +126,6 @@ Minimal HTTP API:
 }
 ```
 
-(Additional fields can be added later.)
 
 ### `/api/wikis` response schema (v1)
 
@@ -153,3 +174,32 @@ The `state` field is defined by the wiki lifecycle state machine below.
   * process lifecycle events
   * timeouts / health checks
 
+---
+
+## Config File
+
+`twos.config.json`
+
+User-controlled. Daemon validates and loads it at startup.
+
+---
+
+## CLI
+
+Namespace: `twos`
+
+Initially a stub. Will later include:
+
+- `twos start`
+- `twos stop`
+- `twos status`
+- `twos reload`
+
+---
+
+## Daemon Goals (v1)
+
+- Load config
+- Track wiki runtime states
+- Expose API
+- Provide foundation for process launcher (v2)
