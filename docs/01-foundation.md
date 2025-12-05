@@ -1,54 +1,115 @@
-## Purpose:
-     TW Oni Server is a local daemon that manages TiddlyWiki instances, their core versions, and some host-level features (backup, git, etc.)
-     It is cross-platform (Windows, macOS, Linux) can run as a background service/daemon, and as a GUI that lets you manage all your TiddlyWiki madness.
+# TW Oni Server – Foundation
 
-## *Out-of-scope for v1*:
+## Purpose
 
-     * No offline config queue.
-     * No TW-driven GitHub integration.
-     * No Electron.
-     * No fancy UI beyond a basic HTML page + CLI.
+TW Oni Server (TWOS) is a local daemon that manages TiddlyWiki instances, their core versions, and some host-level features (backup, git, etc.).
 
-## *Core concepts*: precise, short definitions:
+It is:
 
-     * **Daemon**: single long-running process, owns config and wiki lifecycles.
-     * **Wiki**: one managed TiddlyWiki instance (with id, rootPath, twCoreVersion, port, role, scopes).
-     * **Role**: `master` or `default` only in v1.
-     * **Scopes**: start/own, start/any, config/read, config/write, etc. (just list them).
+- Cross-platform (Windows, macOS, Linux).
+- Able to run as a background service/daemon.
+- Controllable via CLI (`twos`) and a minimal HTTP API (and later a simple HTML UI).
 
-## *Config schema v1*:
-     A simple JSON example like the one you wrote, but cleaned up:
+## Out-of-scope for v1
 
-     ```json
-     {
-       "wikis": {
-         "TwAdmMaster": {
-           "role": "master",
-           "scopes": ["start:any", "config:write"],
-           "twCoreVersion": "5.3.8",
-           "rootPath": "C:/Users/dylan/AppData/Local/twadm/OneWikiToRuleThemAll",
-           "twPluginPaths": [
-             "C:/Program Files/twadm/assets/tw-v5.3.8/plugins/",
-             "C:/mywikis/my-plugins/"
-           ],
-           "https": false,
-           "host": "localhost",
-           "port": 5020,
-           "autoStart": true
-         }
-       }
-     }
-     ```
+- No offline config queue.
+- No TW-driven GitHub integration (TW’s own sync plugins are independent).
+- No Electron shell.
+- No fancy UI beyond a basic HTML page + CLI.
+- No multi-user auth; only local, trusted usage.
 
-## *API endpoints v1 (read-only + basic control)*:
-     For now, define only:
+## Core concepts
 
-     * `GET /api/wikis` → list wikis + status
-     * `POST /api/wikis/:id/start`
-     * `POST /api/wikis/:id/stop`
-     * `GET /api/health`
+- **Daemon**  
+  Single long-running process. Owns:
+  - global config
+  - wiki lifecycles (start/stop)
+  - host-level features (backups, git jobs, etc.).
 
-### `/api/wikis` response schema:
+- **Wiki**  
+  One managed TiddlyWiki instance with:
+  - `id`
+  - `rootPath`
+  - `twCoreVersion`
+  - `host`, `port`
+  - `role`
+  - `scopes`
+
+- **Role** (v1)  
+  - `master` – allowed to perform global/daemon-level actions.
+  - `default` – only allowed to manage itself.
+
+- **Scopes** (v1)  
+  Strings that represent capabilities. Initial set:
+  - `start:own`
+  - `start:any`
+  - `status:own`
+  - `status:any`
+  - `config:read`
+  - `config:write`
+
+(In v1, scopes are mostly design placeholders; enforcement can be minimal.)
+
+## Config schema (v1)
+
+Example daemon config:
+
+```json
+{
+  "wikis": {
+    "TwAdmMaster": {
+      "role": "master",
+      "scopes": ["start:any", "config:write"],
+      "twCoreVersion": "5.3.8",
+      "rootPath": "C:/Users/dylan/AppData/Local/twadm/OneWikiToRuleThemAll",
+      "twPluginPaths": [
+        "C:/Program Files/twadm/assets/tw-v5.3.8/plugins/",
+        "C:/mywikis/my-plugins/"
+      ],
+      "https": false,
+      "host": "localhost",
+      "port": 5020,
+      "autoStart": true
+    }
+  }
+}
+````
+
+In v1:
+
+* There is a single config file (e.g. `twos.config.json`).
+* If config is invalid, the daemon fails fast and logs a clear error.
+
+## API endpoints (v1)
+
+Minimal HTTP API:
+
+* `GET /api/health`
+  Returns daemon health.
+
+* `GET /api/wikis`
+  Returns the configured wikis and their current runtime state.
+
+* `POST /api/wikis/:id/start`
+  Requests that the daemon start the wiki `:id`.
+
+* `POST /api/wikis/:id/stop`
+  Requests that the daemon stop the wiki `:id`.
+
+### `/api/health` response
+
+```json
+{
+  "status": "ok"
+}
+```
+
+(Additional fields can be added later.)
+
+### `/api/wikis` response schema (v1)
+
+In v1, wikis are returned as an object keyed by wiki id:
+
 ```json
 {
   "wikis": {
@@ -67,14 +128,28 @@
 }
 ```
 
+The `state` field is defined by the wiki lifecycle state machine below.
 
-## *State machine for one wiki*:
-| **State**  | **Meaning**                                                          | **Allowed Transitions**       | **Triggered By**            |
-| ---------- | -------------------------------------------------------------------- | ----------------------------- | --------------------------- |
-| `unknown`  | Daemon has not yet attempted to start or inspect this wiki.          | `stopped`, `starting`         | Daemon boot, config load    |
-| `stopped`  | No process running for this wiki.                                    | `starting`                    | API call `/start`           |
-| `starting` | Daemon has spawned the process but not yet confirmed it is serving.  | `running`, `error`, `stopped` | Process events, timeout     |
-| `running`  | The wiki process is alive **and responding on its configured port**. | `stopping`, `error`           | API call `/stop`, crash     |
-| `stopping` | Daemon has issued a stop/kill but not yet confirmed shutdown.        | `stopped`, `error`            | Process exit                |
-| `error`    | Daemon failed to start a wiki, or detected abnormal termination.     | `stopped`, `starting`         | Manual retry, config change |
+## Wiki lifecycle state machine
+
+### States
+
+| **State**  | **Meaning**                                                           | **Allowed Transitions**       | **Triggered By**                           |
+| ---------- | --------------------------------------------------------------------- | ----------------------------- | ------------------------------------------ |
+| `unknown`  | Daemon has not yet attempted to start or inspect this wiki.           | `stopped`, `starting`         | Daemon boot, config load                   |
+| `stopped`  | No process running for this wiki.                                     | `starting`                    | API call `POST /api/wikis/:id/start`       |
+| `starting` | Process spawned but not yet confirmed serving on its configured port. | `running`, `error`, `stopped` | Process events, timeout                    |
+| `running`  | Process alive **and responding** on its configured host/port.         | `stopping`, `error`           | API call `POST /api/wikis/:id/stop`, crash |
+| `stopping` | Daemon has issued a stop/kill but shutdown not yet confirmed.         | `stopped`, `error`            | Process exit                               |
+| `error`    | Start failed, or abnormal termination detected.                       | `stopped`, `starting`         | Manual retry, config change                |
+
+### Notes
+
+* `unknown` is the initial state after daemon boot, before any attempt to interact with a wiki.
+* The daemon is the sole authority on state; clients (CLI, UI, TW plugin) **never** set state directly, they only request actions.
+* State changes are driven by:
+
+  * API calls (`/start`, `/stop`)
+  * process lifecycle events
+  * timeouts / health checks
 
