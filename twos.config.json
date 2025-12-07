@@ -1,6 +1,24 @@
 {
+  "settings":{
+    "masterWiki": "OneWikiToRuleThemAll"
+  },
+  "oniServers": {
+    "dev": {
+      "enabled": true,
+      "port": 7350,
+      "logLevel": "info",
+      "logsPath": "./dev/logs",
+      "pidPath": "./dev/pids"
+    },
+    "prod": {
+      "port": 7355,
+      "logLevel": "info",
+      "logsPath": "./logs",
+      "pidPath": "./pids"
+    }
+  },
   "wikis": {
-    "twos_master": {
+    "OneWikiToRuleThemAll": {
       "role": "master",
       "scopes": ["start:any", "config:write"],
       "twCoreVersion": "5.3.8",

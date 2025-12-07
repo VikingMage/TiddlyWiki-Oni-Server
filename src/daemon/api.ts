@@ -38,7 +38,13 @@ export class DaemonAPI {
   }
   start(mode: "dev" | "prod") {
     console.log(`Starting daemon in ${mode} mode...`);
-    //TODO: implement start logic for dev (src/daemon/daemon.ts) 
+    // if server is not listening, start it else log that it's already running
+    if (!this.server.listening) {
+      this.listen(7357);
+    } else {
+      console.log("Daemon API is already running.");
+    }
+    // TODO: implement start logic for dev so that we don't have to keep running `ts-node src/daemon/daemon.ts`
     // prod mode will be implemented later
 
   }

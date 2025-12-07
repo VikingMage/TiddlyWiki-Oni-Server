@@ -83,8 +83,9 @@ async function main(argv: string[]): Promise<void> {
       break;
 
     case "dev":
-       // start daemon in dev mode (TODO create cli to start/stop daemon in dev mode)
-
+       // start daemon in dev mode 
+       // TODO: create API to start & stop daemon in dev mode
+       // TODO: implement api call
 
     case null:
     case "help":
