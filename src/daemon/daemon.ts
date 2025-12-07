@@ -1,8 +1,8 @@
 import path from "path";
-import { readJson } from "../util/fs.js";
-import { DaemonConfig, WikiConfig } from "./types.js";
-import { WikiRuntime } from "./runtime.js";
-import { DaemonAPI } from "./api.js";
+import { readJson } from "../util/fs";
+import { DaemonConfig, WikiConfig } from "./types";
+import { WikiRuntime } from "./runtime";
+import { DaemonAPI } from "./api";
 
 function loadConfig(): DaemonConfig {
   const filePath = path.resolve("twos.config.json");

@@ -1,6 +1,6 @@
 // todo: fix errors
 import http from "http";
-import { WikiRuntime } from "./runtime.js";
+import { WikiRuntime } from "./runtime";
 
 export class DaemonAPI {
   private server: http.Server;
@@ -35,5 +35,11 @@ export class DaemonAPI {
     this.server.listen(port, () => {
       console.log(`Daemon API running on http://localhost:${port}`);
     });
+  }
+  start(mode: "dev" | "prod") {
+    console.log(`Starting daemon in ${mode} mode...`);
+    //TODO: implement start logic for dev (src/daemon/daemon.ts) 
+    // prod mode will be implemented later
+
   }
 }

@@ -1,6 +1,6 @@
 {
   "wikis": {
-    "TwAdmMaster": {
+    "twos_master": {
       "role": "master",
       "scopes": ["start:any", "config:write"],
       "twCoreVersion": "5.3.8",
