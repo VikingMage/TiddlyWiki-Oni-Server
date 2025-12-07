@@ -5,13 +5,16 @@
   "oniServers": {
     "dev": {
       "enabled": true,
+      "host" : "localhost",
       "port": 7350,
-      "logLevel": "info",
+      "logLevel": "debug",
       "logsPath": "./dev/logs",
       "pidPath": "./dev/pids"
     },
     "prod": {
+      "enabled": false,
       "port": 7355,
+      "host" : "localhost",
       "logLevel": "info",
       "logsPath": "./logs",
       "pidPath": "./pids"

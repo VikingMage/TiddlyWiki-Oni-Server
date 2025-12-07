@@ -84,6 +84,9 @@ async function main(argv: string[]): Promise<void> {
 
     case "dev":
        // start daemon in dev mode 
+      // exitCode = await cmdStartOni("dev");
+      break;
+       
        // TODO: create API to start & stop daemon in dev mode
        // TODO: implement api call
 

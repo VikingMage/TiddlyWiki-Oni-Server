@@ -8,6 +8,35 @@ export type WikiState =
   | "stopping"
   | "error";
 
+export type OniState =
+  | "unknown"
+  | "stopped"
+  | "starting"
+  | "running"
+  | "stopping"
+  | "error";
+
+
+
+export interface ConfigEntries {
+  [id: string]: any;
+
+  }
+
+export interface SettingsConfig {
+  masterWiki: string;
+}
+
+export interface OniServerConfig {
+  mode: "dev" | "prod";
+  enabled?: boolean;
+  host?: string;
+  port?: number;
+  logLevel?: "debug" | "info" | "warn" | "error";
+  logsPath?: string;
+  pidPath?: string;
+}
+
 export interface WikiConfig {
   id: string;
   role: WikiRole;
@@ -19,8 +48,4 @@ export interface WikiConfig {
   host: string;
   port: number;
   autoStart: boolean;
-}
-
-export interface DaemonConfig {
-  wikis: Record<string, WikiConfig>;
 }
