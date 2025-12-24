@@ -1,106 +1,99 @@
 #!/usr/bin/env node
 
+import { TwosConfig } from "../daemon/TwosConfig";
 import { HttpClient } from "../util/httpClient";
+import { startOniServer } from "../daemon/OniRuntime";
 
-interface ParsedArgs {
-  command: string | null;
-  args: string[];
+function usage() {
+  console.log("Usage:");
+  console.log("  twos <mode>                    Run OniServer daemon (foreground)");
+  console.log("  twos <mode> health             Daemon health");
+  console.log("  twos <mode> status             Daemon status");
+  console.log("  twos <mode> wikis              List wikis");
+  console.log("  twos <mode> start-wiki <id>    Request wiki start");
+  console.log("  twos <mode> stop-wiki <id>     Request wiki stop");
+  console.log("  twos <mode> shutdown           Graceful daemon shutdown");
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
-  // argv: ["node", "cli.js", ...]
-  const [, , ...rest] = argv;
-  const command = rest[0] ?? null;
-  const args = rest.slice(1);
-  return { command, args };
+export async function cmdStartOni(mode: "dev" | "prod"): Promise<void> {
+  startOniServer(mode);
+  // IMPORTANT: do not call process.exit(); this is a foreground daemon run.
 }
 
-async function cmdHealth(client: HttpClient): Promise<number> {
-  try {
-    const data = await client.getJson<{ status: string }>("/api/health");
-    console.log(`Daemon status: ${data.status}`);
-    return 0;
-  } catch (err) {
-    console.error("Failed to query daemon health:", err);
-    return 1;
+async function main(argv: string[]) {
+  const [, , modeRaw, cmd, ...rest] = argv;
+
+  if (!modeRaw) {
+    usage();
+    process.exit(1);
   }
-}
 
-async function cmdWikis(client: HttpClient): Promise<number> {
-  try {
-    const data = await client.getJson<{
-      wikis: Record<
-        string,
-        {
-          id: string;
-          role: string;
-          state: string;
-          host: string;
-          port: number;
-        }
-      >;
-    }>("/api/wikis");
+  const mode = modeRaw as "dev" | "prod";
 
-    const entries = Object.values(data.wikis);
-
-    if (entries.length === 0) {
-      console.log("No wikis configured.");
-      return 0;
-    }
-
-    for (const wiki of entries) {
-      console.log(
-        `${wiki.id.padEnd(16)}  role=${wiki.role.padEnd(7)}  state=${wiki.state.padEnd(
-          8
-        )}  ${wiki.host}:${wiki.port}`
-      );
-    }
-
-    return 0;
-  } catch (err) {
-    console.error("Failed to query wikis:", err);
-    return 1;
+  // If no subcommand, run daemon in foreground
+  if (!cmd) {
+    await cmdStartOni(mode);
+    return;
   }
-}
 
-async function main(argv: string[]): Promise<void> {
-  const { command } = parseArgs(argv);
+  // Dispatcher commands talk to daemon via config-defined port
+  const config = new TwosConfig("./twos.config.json");
+  const serverCfg = config.oniServers.get(mode);
+
+  if (!serverCfg?.enabled) {
+    console.error(`Mode "${mode}" is disabled or missing.`);
+    process.exit(1);
+  }
 
   const client = new HttpClient({
-    host: "localhost",
-    port: 7357
+    host: serverCfg.host ?? "localhost",
+    port: serverCfg.port!
   });
 
-  let exitCode = 0;
-
-  switch (command) {
-    case "health":
-      exitCode = await cmdHealth(client);
-      break;
-
-    case "wikis":
-      exitCode = await cmdWikis(client);
-      break;
-
-    case "dev":
-       // start daemon in dev mode 
-      // exitCode = await cmdStartOni("dev");
-      break;
-       
-       // TODO: create API to start & stop daemon in dev mode
-       // TODO: implement api call
-
-    case null:
-    case "help":
-    default:
-      console.log("Usage:");
-      console.log("  twos health        Check daemon health");
-      console.log("  twos wikis         List configured wikis and their state");
-      exitCode = command === null ? 0 : 1;
-      break;
+  try {
+    switch (cmd) {
+      case "health": {
+        const data = await client.getJson("/api/health");
+        console.log(JSON.stringify(data, null, 2));
+        break;
+      }
+      case "status": {
+        const data = await client.getJson("/api/status");
+        console.log(JSON.stringify(data, null, 2));
+        break;
+      }
+      case "wikis": {
+        const data = await client.getJson("/api/wikis");
+        console.log(JSON.stringify(data, null, 2));
+        break;
+      }
+      case "start-wiki": {
+        const id = rest[0];
+        if (!id) throw new Error("Missing wiki id");
+        const data = await client.postJson(`/api/wiki/start?id=${encodeURIComponent(id)}`);
+        console.log(JSON.stringify(data, null, 2));
+        break;
+      }
+      case "stop-wiki": {
+        const id = rest[0];
+        if (!id) throw new Error("Missing wiki id");
+        const data = await client.postJson(`/api/wiki/stop?id=${encodeURIComponent(id)}`);
+        console.log(JSON.stringify(data, null, 2));
+        break;
+      }
+      case "shutdown": {
+        const data = await client.postJson("/api/shutdown");
+        console.log(JSON.stringify(data, null, 2));
+        break;
+      }
+      default:
+        usage();
+        process.exit(1);
+    }
+  } catch (err) {
+    console.error("Command failed:", err);
+    process.exit(1);
   }
-
-  process.exit(exitCode);
 }
 
 void main(process.argv);
